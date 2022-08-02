@@ -30,29 +30,57 @@ def main():
     listening_socket.listen(1)
     
     # prints message with address of site
-    print(f"Chat operational. Connect at http://127.0.0.1:{port}")
+    print(f"Chat operational. Connect client to http://127.0.0.1:{port}")
 
-    # makes new socket to handle each client
+    # makes new socket to handle connection to client
     client_socket, addr = listening_socket.accept()   
 
     # loop for chat
     while True:
 
-        # receives incoming request and prints it
-        incoming_message = client_socket.recv(1024).decode()
-        print(incoming_message)
+        incoming_messages = []
+        incoming_header = ''
+
+        expected_chars = -1
+        received_characters = 0
+        while expected_chars == -1 or received_characters < expected_chars:
+            received_string = client_socket.recv(10).decode()
+            if not received_string:
+                incoming_messages.append(0)
+                break
+
+            if expected_chars == -1:
+                incoming_header += received_string
+
+                if '!' in incoming_header:
+                    split_header = incoming_header.split('!', 1)
+                    expected_chars = int(split_header[0], 16)
+                    if len(split_header) > 1:
+                        incoming_messages.append(split_header[1])
+                        received_characters += len(split_header[1])
+                
+                continue
+
+            received_characters += len(received_string)
+            incoming_messages.append(received_string)
+
+        if not incoming_messages[-1]:
+            print('client has severed the connection')
+        
+        # prints constructed string
+        print(''.join(incoming_messages))
         
         print('>', end=' ')
         outgoing_message = input()
+
+        if outgoing_message == '/q':
+            break
+
+        header = hex(len(outgoing_message))[2:] + '!'
+        outgoing_message = ''.join([header, outgoing_message])
+        print(f"sending {outgoing_message}")
+
         client_socket.send(outgoing_message.encode())
 
-    # close each individual connection to client after use
-    # does not close the listening socket, so more connections can be made
-    # Citation for following line:
-    # Date: 06/30/2022
-    # URL: according to https://docs.python.org/3/howto/sockets.html, it is polite to call shutdown before closing
-    client_socket.shutdown(SHUT_RDWR)
-    client_socket.close()
-    
 if __name__ == "__main__":
     main()

@@ -25,11 +25,46 @@ def main():
         # prompts for message
         print('>', end=' ')
         outgoing_message = input()
+        if outgoing_message == '/q':
+            break
+
+        header = hex(len(outgoing_message))[2:] + '!'
+        outgoing_message = ''.join([header, outgoing_message])
+        print(f"sending {outgoing_message}")
         server_socket.send(outgoing_message.encode())
 
-        # receives response
-        incoming_message = server_socket.recv(response_len_max)
-        print(incoming_message.decode())
+        incoming_messages = []
+        incoming_header = ''
+
+        expected_chars = -1
+        received_characters = 0
+        while expected_chars == -1 or received_characters < expected_chars:
+            received_string = server_socket.recv(10).decode()
+            if not received_string:
+                incoming_messages.append(0)
+                break
+
+            if expected_chars == -1:
+                incoming_header += received_string
+
+                if '!' in incoming_header:
+                    split_header = incoming_header.split('!', 1)
+                    expected_chars = int(split_header[0], 16)
+                    if len(split_header) > 1:
+                        incoming_messages.append(split_header[1])
+                        received_characters += len(split_header[1])
+                
+                continue
+
+            received_characters += len(received_string)
+            incoming_messages.append(received_string)
+        
+        if not incoming_messages[-1]:
+            print('server has severed the connection')
+            break
+
+        # prints constructed string
+        print(''.join(incoming_messages))
 
 if __name__ == "__main__":
     main()
