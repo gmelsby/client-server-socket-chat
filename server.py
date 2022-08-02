@@ -53,11 +53,10 @@ def main():
                 break
 
             received_char = received_char.decode()
-            print(received_char)
             if received_char == '!':
                 # assemble header
                 incoming_header = ''.join(incoming_header)
-                expected_bytes = max(int(incoming_header, 16), 0)
+                expected_bytes = int(incoming_header, 16)
 
             else:
                 incoming_header.append(received_char)
@@ -74,7 +73,6 @@ def main():
                 break
 
             received_bytes += len(received_string)
-            print(received_string)
             incoming_byte_messages.append(received_string)
         
         if closed_flag:
@@ -93,7 +91,6 @@ def main():
 
         header = hex(len(outgoing_message.encode()))[2:] + '!'
         outgoing_message = ''.join([header, outgoing_message])
-        print(f"sending {outgoing_message}")
 
         client_socket.send(outgoing_message.encode())
 

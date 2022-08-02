@@ -52,7 +52,7 @@ def main():
             if received_char == '!':
                 # assemble header
                 incoming_header = ''.join(incoming_header)
-                expected_bytes = max(int(incoming_header, 16), 0)
+                expected_bytes = int(incoming_header, 16)
 
             else:
                 incoming_header.append(received_char)
