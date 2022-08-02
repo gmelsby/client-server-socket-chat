@@ -5,6 +5,8 @@
 # Due Date: 08/07/2022
 # Description: Simple program that uses a socket to be a client for client/server chat
 
+# Citation
+# https://docs.python.org/3/howto/sockets.html
 
 from socket import *
 
@@ -14,13 +16,13 @@ def main():
     # use port 80 for http
     port = 5834
     host = "127.0.0.1"
-    # indicates that the maximum amount of bytes to receive is 2048
-    response_len_max = 2048
     
     # sets up socket and connection
     server_socket = socket(AF_INET, SOCK_STREAM)
     server_socket.connect((host, port))
     
+    closed_flag = False
+
     while True:
         # prompts for message
         print('>', end=' ')
@@ -28,44 +30,53 @@ def main():
         if outgoing_message == '/q':
             break
 
-        header = hex(len(outgoing_message))[2:] + '!'
+        # generates header and appends to front of message
+        header = hex(len(outgoing_message.encode()))[2:] + '!'
         outgoing_message = ''.join([header, outgoing_message])
         print(f"sending {outgoing_message}")
         server_socket.send(outgoing_message.encode())
 
-        incoming_messages = []
-        incoming_header = ''
+        # waits to receive message
 
-        expected_chars = -1
-        received_characters = 0
-        closed_flag = False
-        while expected_chars == -1 or received_characters < expected_chars:
-            received_string = server_socket.recv(10).decode()
+        # loop to get message length
+        incoming_header = []
+        expected_bytes = -1
+        while expected_bytes == -1:
+            received_char = server_socket.recv(1)
+            # case where other socket closed
+            if received_char == 0:
+                closed_flag = True
+                break
+
+            received_char = received_char.decode()
+            if received_char == '!':
+                # assemble header
+                incoming_header = ''.join(incoming_header)
+                expected_bytes = max(int(incoming_header, 16), 0)
+
+            else:
+                incoming_header.append(received_char)
+
+
+        # loop to receive payload data
+        received_bytes = 0
+        incoming_byte_messages = []
+        while received_bytes < expected_bytes:
+            received_string = server_socket.recv(min(10, expected_bytes - received_bytes))
+            # case where server has closed connection
             if received_string == 0:
                 closed_flag = True
                 break
 
-            if expected_chars == -1:
-                incoming_header += received_string
-
-                if '!' in incoming_header:
-                    split_header = incoming_header.split('!', 1)
-                    expected_chars = int(split_header[0], 16)
-                    if len(split_header) > 1:
-                        incoming_messages.append(split_header[1])
-                        received_characters += len(split_header[1])
-                
-                continue
-
-            received_characters += len(received_string)
-            incoming_messages.append(received_string)
+            received_bytes += len(received_string)
+            incoming_byte_messages.append(received_string)
         
         if closed_flag:
             print('server has severed the connection')
             break
 
         # prints constructed string
-        print(''.join(incoming_messages))
+        print(b''.join(incoming_byte_messages).decode())
 
 if __name__ == "__main__":
     main()
