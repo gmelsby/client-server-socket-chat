@@ -40,13 +40,14 @@ def main():
 
         incoming_messages = []
         incoming_header = ''
+        closed_flag = False
 
         expected_chars = -1
         received_characters = 0
         while expected_chars == -1 or received_characters < expected_chars:
             received_string = client_socket.recv(10).decode()
             if not received_string:
-                incoming_messages.append(0)
+                closed_flag = True
                 break
 
             if expected_chars == -1:
@@ -64,8 +65,9 @@ def main():
             received_characters += len(received_string)
             incoming_messages.append(received_string)
 
-        if not incoming_messages[-1]:
+        if closed_flag:
             print('client has severed the connection')
+            break
         
         # prints constructed string
         print(''.join(incoming_messages))

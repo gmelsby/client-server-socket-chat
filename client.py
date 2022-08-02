@@ -38,10 +38,11 @@ def main():
 
         expected_chars = -1
         received_characters = 0
+        closed_flag = False
         while expected_chars == -1 or received_characters < expected_chars:
             received_string = server_socket.recv(10).decode()
-            if not received_string:
-                incoming_messages.append(0)
+            if received_string == 0:
+                closed_flag = True
                 break
 
             if expected_chars == -1:
@@ -59,7 +60,7 @@ def main():
             received_characters += len(received_string)
             incoming_messages.append(received_string)
         
-        if not incoming_messages[-1]:
+        if closed_flag:
             print('server has severed the connection')
             break
 
