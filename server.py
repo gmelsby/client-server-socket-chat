@@ -11,8 +11,6 @@
 from socket import *
 
 def main():
-    # sets up variables to be used later
-    # at top for easy modification
     # use a random port number above 1023 (below is reserved)
     port = 5834
     # socket will be bound to 127.0.0.1 for local access
@@ -36,63 +34,70 @@ def main():
 
     # makes new socket to handle connection to client
     client_socket, addr = listening_socket.accept()   
+    listening_socket.close()
 
-    closed_flag = False
+    with client_socket:
+        closed_flag = False
 
-    # loop for chat
-    while True:
+        # loop for chat
+        while True:
 
-        # loop to get message length
-        incoming_header = []
-        expected_bytes = -1
-        while expected_bytes == -1:
-            received_char = client_socket.recv(1)
-            # case where other socket closed
-            if received_char == 0:
-                closed_flag = True
+            # loop to get message length
+            incoming_header = []
+            expected_bytes = -1
+            while expected_bytes == -1:
+                received_char = client_socket.recv(1)
+                # case where other socket closed
+                if not len(received_char):
+                    print('other side connection closed')
+                    closed_flag = True
+                    break
+
+                received_char = received_char.decode()
+                if received_char == '!':
+                    # assemble header
+                    incoming_header = ''.join(incoming_header)
+                    expected_bytes = int(incoming_header, 16)
+
+                else:
+                    incoming_header.append(received_char)
+
+
+            # loop to receive payload data
+            received_bytes = 0
+            incoming_byte_messages = []
+            while received_bytes < expected_bytes and not closed_flag:
+                received_string = client_socket.recv(expected_bytes - received_bytes)
+                # case where server has closed connection
+                if not len(received_string):
+                    print('other side connection closed')
+                    closed_flag = True
+                    break
+
+                received_bytes += len(received_string)
+                incoming_byte_messages.append(received_string)
+            
+            if closed_flag:
+                print('client has severed the connection')
                 break
 
-            received_char = received_char.decode()
-            if received_char == '!':
-                # assemble header
-                incoming_header = ''.join(incoming_header)
-                expected_bytes = int(incoming_header, 16)
-
-            else:
-                incoming_header.append(received_char)
+            # prints constructed string
+            print(b''.join(incoming_byte_messages).decode())
 
 
-        # loop to receive payload data
-        received_bytes = 0
-        incoming_byte_messages = []
-        while received_bytes < expected_bytes:
-            received_string = client_socket.recv(min(10, expected_bytes - received_bytes))
-            # case where server has closed connection
-            if received_string == 0:
-                closed_flag = True
+            print('>', end=' ')
+            outgoing_message = input()
+
+            if outgoing_message == '/q':
+                print('closing connection')
                 break
 
-            received_bytes += len(received_string)
-            incoming_byte_messages.append(received_string)
-        
-        if closed_flag:
-            print('client has severed the connection')
-            break
+            header = hex(len(outgoing_message.encode()))[2:] + '!'
+            outgoing_message = ''.join([header, outgoing_message])
 
-        # prints constructed string
-        print(b''.join(incoming_byte_messages).decode())
+            # encode all of our communication to utf-8 to bypass endianness issues
+            client_socket.send(outgoing_message.encode())
 
-
-        print('>', end=' ')
-        outgoing_message = input()
-
-        if outgoing_message == '/q':
-            break
-
-        header = hex(len(outgoing_message.encode()))[2:] + '!'
-        outgoing_message = ''.join([header, outgoing_message])
-
-        client_socket.send(outgoing_message.encode())
 
 if __name__ == "__main__":
     main()
