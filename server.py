@@ -41,6 +41,9 @@ def main():
     print("Client connected. Wait for them to send you a message.")
 
     # 'with' context manager handles socket closing
+    # Citation: 
+    # Discussion of 'with' re: sockets found here https://bugs.python.org/issue24911
+    # Date: 08/06/22
     with client_socket:
         closed_flag = False
 
@@ -54,7 +57,6 @@ def main():
                 received_char = client_socket.recv(1)
                 # case where other socket closed
                 if not len(received_char):
-                    print('other side connection closed')
                     closed_flag = True
                     break
 
@@ -82,7 +84,7 @@ def main():
                 incoming_byte_messages.append(received_string)
             
             if closed_flag:
-                print('client has severed the connection')
+                print('client has closed the connection')
                 break
 
             # prints constructed string

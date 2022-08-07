@@ -49,6 +49,7 @@ def main():
                 received_char = server_socket.recv(1)
                 # case where other socket closed
                 if not len(received_char):
+                    closed_flag = True
                     break
 
                 received_char = received_char.decode()
