@@ -5,8 +5,9 @@
 # Due Date: 08/07/2022
 # Description: Simple program that uses a socket to be a server for client/server chat
 
-# Citation
-# https://docs.python.org/3/howto/sockets.html
+# Citation for general guidance on construction of program
+# Date: 08/01/2022
+# URL: https://docs.python.org/3/howto/sockets.html
 
 from socket import *
 
@@ -26,16 +27,20 @@ def main():
     listening_socket.bind((host, port))
 
     # only allow one connection at a time
-    # if more connections are attempted, rejects
     listening_socket.listen(1)
     
     # prints message with address of site
     print(f"Chat operational. Connect client to http://127.0.0.1:{port}")
 
     # makes new socket to handle connection to client
-    client_socket, addr = listening_socket.accept()   
+    client_socket, addr = listening_socket.accept()
+
+    # handles teardown of listening socket
     listening_socket.close()
 
+    print("Client connected. Wait for them to send you a message.")
+
+    # 'with' context manager handles socket closing
     with client_socket:
         closed_flag = False
 
@@ -53,6 +58,7 @@ def main():
                     closed_flag = True
                     break
 
+                # get header one char at a time
                 received_char = received_char.decode()
                 if received_char == '!':
                     # assemble header
@@ -70,8 +76,6 @@ def main():
                 received_string = client_socket.recv(expected_bytes - received_bytes)
                 # case where server has closed connection
                 if not len(received_string):
-                    print('other side connection closed')
-                    closed_flag = True
                     break
 
                 received_bytes += len(received_string)
@@ -85,13 +89,16 @@ def main():
             print(b''.join(incoming_byte_messages).decode())
 
 
+            # prompt for outgoing message
             print('>', end=' ')
             outgoing_message = input()
 
+            # closes if '/q'
             if outgoing_message == '/q':
                 print('closing connection')
                 break
 
+            # generates and appends header
             header = hex(len(outgoing_message.encode()))[2:] + '!'
             outgoing_message = ''.join([header, outgoing_message])
 
